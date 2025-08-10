@@ -1,0 +1,23 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+venv.bak/
+.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# IDE / Editor specific files
+.vscode/
+.idea/
+
+# PInG Project Specific: Finetuning Configs, Finetuned Models and Outputs
+configs/
+models/
+output/
