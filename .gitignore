@@ -10,14 +10,14 @@ ENV/
 venv.bak/
 .env
 
-# Jupyter Notebook checkpoints
+# Jupyter笔记本检查点
 .ipynb_checkpoints
 
-# IDE / Editor specific files
+# IDE / 编辑器特定文件
 .vscode/
 .idea/
 
-# PInG Project Specific: Finetuning Configs, Finetuned Models and Outputs
+# PInG项目特定：微调配置、微调模型和输出
 configs/
 models/
 output/
