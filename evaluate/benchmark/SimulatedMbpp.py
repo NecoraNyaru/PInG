@@ -1,31 +1,31 @@
 import os
 from typing import Literal
 
-from .mbpp import mbpp
+from .MBPP import MBPP
 from ..utils import stream_jsonl, refine_text
 from ..eval.func_eval import check_correctness
 from ..eval.sanitize import sanitize
 
-class SimulatedMbpp(mbpp):
+class SimulatedMBPP(MBPP):
     """
-    A specialized Benchmark class to run the PInG simulated user study on the mbpp dataset.
+    A specialized Benchmark class to run the PInG simulated user study on the MBPP dataset (plus version).
     """
-    name: str = "SimulatedMbpp"
+    name: str = "SimulatedMBPP"
 
     def __init__(
         self,
-        split: Literal["full", "sanitized"] = "sanitized",
+        split: Literal["base", "plus"] = "plus",
         time_out: float = 3.0,
         prompt_type: str = "Instruction",
         data_path: str = None
     ):
-        super(mbpp, self).__init__(split=split, time_out=time_out, prompt_type=prompt_type)
+        super(MBPP, self).__init__(split=split, time_out=time_out, prompt_type=prompt_type)
         if not data_path:
             raise ValueError("The '--simulated_data_path' must be provided for the simulated task.")
         self.simulated_data_path = data_path
         
-        # Load original mbpp tasks for prompts and tests
-        self.original_mbpp_tasks = super().get_task()
+        # Load original MBPP tasks for prompts and tests
+        self.original_MBPP_tasks = super().get_task()
         # Load simulated interaction data
         self.simulated_tasks = self._get_simulated_tasks()
 
@@ -45,20 +45,20 @@ class SimulatedMbpp(mbpp):
             # Skip if there is no feedback
             if not feedback_list:
                 continue
-
+            
             # Find the feedback with the earliest statement number
             feedback = min(feedback_list, key=lambda f: f['statement_number'])
 
             statement_idx = feedback['statement_number'] - 1
             edited_comment = feedback['edited_comment']
             
-            original_task_data = self.original_mbpp_tasks[task_id]
-            # Use the original format_prompt from the parent mbpp class, but without the code part
+            original_task_data = self.original_MBPP_tasks[task_id]
+            # Use the original format_prompt from the parent MBPP class
             original_task_prompt = super().format_prompt(
                 promblem=original_task_data["text"],
-                tests=original_task_data["test_list"]
-            ).replace("\n```python\n", "") # Remove the default code block starter
-            
+                test=original_task_data["test_list"][0]
+            )
+
             # Construct the code head
             code_head_statements = [sim_data['code_with_comments'][i]['statement'] for i in range(statement_idx)]
             code_head = '\n'.join(code_head_statements)
@@ -67,10 +67,10 @@ class SimulatedMbpp(mbpp):
             original_incorrect_statement = sim_data['code_with_comments'][statement_idx]['statement']
             indentation = ' ' * (len(original_incorrect_statement) - len(original_incorrect_statement.lstrip(' ')))
             
-            # The refinement prompt includes the original problem, few-shot examples (if any), the code head, and the new comment
+            # The refinement prompt includes the original problem, the code head, and the new comment
             refinement_prompt = (
-                f"{self.few_shots_prompt}\n" if self.few_shots_prompt else ""
-                f"{original_task_prompt.strip()}\n"
+                f"{original_task_prompt}\n"
+                f"# Please complete the following Python code:\n"
                 f"```python\n"
                 f"{code_head}\n"
                 f"{indentation}# {edited_comment}"
@@ -93,9 +93,7 @@ class SimulatedMbpp(mbpp):
         if "```" in generated_code_tail:
              generated_code_tail = generated_code_tail.split("```")[0].strip()
 
-        # Find the feedback with the earliest statement number
-        feedback_list = sim_data.get('annotator_feedback')
-        feedback = min(feedback_list, key=lambda f: f['statement_number'])
+        feedback = sim_data['annotator_feedback'][0]
         statement_idx = feedback['statement_number'] - 1
 
         code_head_statements = [sim_data['code_with_comments'][i]['statement'] for i in range(statement_idx)]
@@ -103,8 +101,8 @@ class SimulatedMbpp(mbpp):
 
         full_solution = f"{code_head}\n{generated_code_tail}"
         
-        # The mbpp sanitize function doesn't require an entry point
-        sanitized_solution = sanitize(full_solution)
+        entry_point = self.original_MBPP_tasks[task_id]["entry_point"]
+        sanitized_solution = sanitize(full_solution, entry_point)
 
         return {
             "task_id": task_id,
